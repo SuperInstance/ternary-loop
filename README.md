@@ -1,63 +1,69 @@
 # ternary-loop
 
-**Period detection, loop quantization, and seamless crossfading for ternary signals.**
+**Period detection and seamless looping. Find the repeat, close the circle, play it forever.**
 
-Every signal that repeats is a loop. The question is: *where does it loop?* This crate finds the shortest repeating period in a ternary signal, then gives you the tools to manipulate that loop — trim it, extend it, stretch it, crossfade it so it plays seamlessly forever.
+Every signal that repeats is a loop. The heartbeat of electronic music. The frame buffer of a GIF. The recurring pattern in a cellular automaton. The question is always the same: *where does it loop?* Find the shortest repeating period, trim to that length, and you have a tile that can play forever without a seam.
 
-The crossfade is the secret sauce. Most loop implementations just snap the end to the beginning, which creates a click. This crate blends the endpoints over a configurable fade length, producing loops that are mathematically smooth even in ternary space — the blended values snap to {-1, 0, +1} at the boundaries.
+This crate detects the period of ternary signals, extracts the loop, and provides tools for seamless playback: crossfading the loop boundaries so the splice is invisible, stretching or compressing the loop to different lengths, and layering loops of different periods into polyrhythmic structures.
 
 ## What's Inside
 
-- **`find_loop(signal)`** — find the shortest repeating period. Returns `None` if the signal doesn't repeat exactly
-- **`loop_length(signal, min, max)`** — search for a period within a specific range
-- **`quantize_to_loop(signal, len)`** — trim or extend a signal to exactly `len` samples by looping
-- **`crossfade_loop(signal, fade_len)`** — blend the loop endpoints over `fade_len` samples for seamless repetition
-- **`loop_stretch(signal, target_len)`** — time-stretch a loop to a different length while preserving structure
+- **`find_period(signal)`** — find the shortest repeating period in the signal
+- **`extract_loop(signal, period)`** — extract one cycle of the loop
+- **`crossfade_loop(signal, period, fade_len)`** — crossfade the end into the beginning for seamless looping
+- **`extend_loop(loop_data, repetitions)`** — tile the loop N times
+- **`stretch_loop(loop_data, target_length)`** — time-stretch the loop to a new length
+- **`is_periodic(signal, period)`** — verify the signal actually repeats at this period
+- **`period_histogram(signal)`** — all detected periods and their strengths
+- **`quantize_loop(signal, grid)`** — snap the loop length to the nearest grid value
 
 ## Quick Example
 
 ```rust
 use ternary_loop::*;
 
-// A signal with period 3
-let signal = [1, 0, -1, 1, 0, -1];
-assert_eq!(find_loop(&signal), Some(3));
+let signal = vec![1, 0, -1, 0, 1, 0, -1, 0, 1, 0, -1, 0];
 
-// Quantize to exactly 9 samples (3 loops)
-let extended = quantize_to_loop(&signal, 9);
-// [1, 0, -1, 1, 0, -1, 1, 0, -1]
+// Find the period
+let period = find_period(&signal);
+assert_eq!(period, 4); // [1, 0, -1, 0] repeats
+
+// Extract one loop
+let one_loop = extract_loop(&signal, period);
+// [1, 0, -1, 0]
+
+// Extend: tile it 10 times
+let extended = extend_loop(&one_loop, 10);
+// [1, 0, -1, 0, 1, 0, -1, 0, ...] × 10
 
 // Crossfade for seamless looping
-let looped = [1, 1, 1, 1, -1, -1];
-let smooth = crossfade_loop(&looped, 2);
-// Endpoints blended: no click when this loops back to start
-
-// Stretch a 4-sample loop to 12 samples
-let short = [1, -1, 1, -1];
-let long = loop_stretch(&short, 12);
-assert_eq!(long.len(), 12);
+let seamless = crossfade_loop(&signal, period, 2);
+// Last 2 samples fade into first 2 — no click at the splice
 ```
 
 ## The Deeper Truth
 
-**Exact period detection is O(n²) and worth it.** The algorithm tries every possible period from 1 to n/2, checking if the entire signal is consistent with that period. This is brute force, but for ternary signals — which are short and discrete — it's fast and *exact*. No FFT approximations. No windowing. Either the signal repeats or it doesn't.
+**Period detection is the foundation of rhythm.** A loop is a pattern that repeats. The period is the pattern length. Once you know the period, you know the tempo, you know the rhythm, you know where the downbeat is. Every drum machine, every sequencer, every looper pedal does exactly this: find the period and tile it.
 
-The crossfade works because ternary values snap cleanly: when you blend `1` and `-1` with equal weight, you get `0` — a valid ternary value. This means crossfaded ternary loops never produce invalid intermediate states. The blend stays in the alphabet.
+In ternary, period detection has a unique advantage: the signal only has 3 values, so the autocorrelation function (which period detection is built on) is exact and fast. No floating-point noise, no approximation — the period is either there or it isn't. The period-8 cycle from ternary-fib is the most important loop in the fleet: it's the fundamental rhythm that many other patterns reduce to.
+
+The crossfade is the art: a bad splice creates a click (an abrupt transition at the loop boundary). A good crossfade smooths the transition by blending the end of the loop into the beginning. In ternary, the crossfade is particularly interesting because the blending operation is ternary addition (mod 3) — which can create entirely new values at the splice point. The seam becomes a creative feature, not a bug.
 
 **Use cases:**
-- **Music production** — find the loop point in ternary drum patterns
-- **Animation** — seamless ternary sprite loops
-- **Data compression** — if a signal loops, store one period instead of the whole thing
-- **Game development** — looping AI behavior patterns
-- **Scientific computing** — detect periodicity in ternary time series
+- **Music production** — loop detection for sampling and beat-making
+- **Generative music** — extract loops from generative processes, tile them
+- **Signal analysis** — find periodicity in any ternary data
+- **Game audio** — loop ambient sounds and music seamlessly
+- **Cellular automata** — detect oscillators in CA evolution
 
 ## See Also
 
-- **ternary-fib** — period-8 ternary Fibonacci (a loop that found itself)
-- **ternary-wave** — generate the loops in the first place
-- **ternary-echo** — echoes are loops with decay
-- **ternary-epoch** — epoch boundaries are loop breakpoints
-- **ternary-phase** — phase alignment between overlapping loops
+- **ternary-fib** — period-8 as the fundamental ternary rhythm
+- **ternary-rhythm** — rhythm pattern generation (loops are the building blocks)
+- **ternary-polyrhythm** — layer loops of different periods
+- **ternary-crossfader** — the crossfade curves used at loop boundaries
+- **ternary-echo** — echo creates implicit loops (repeating patterns at delay intervals)
+- **ternary-wave** — generate the signals you're looping
 
 ## Install
 
