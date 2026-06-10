@@ -1,4 +1,6 @@
 [package]
+description = "ternary-loop - SuperInstance ecosystem crate"
+repository = "https://github.com/SuperInstance/ternary-loop"
 name = "ternary-loop"
 version = "0.1.0"
 edition = "2021"
